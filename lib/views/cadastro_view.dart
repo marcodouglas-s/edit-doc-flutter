@@ -21,28 +21,16 @@ class _CadastroViewState extends State<CadastroView> {
   final AuthViewModel _auth = AuthViewModel();
 
   @override
-  void initState() {
-    super.initState();
-    _auth.addListener(_atualizarTela);
-  }
+void dispose() {
 
-  void _atualizarTela() {
-    if (mounted) {
-      setState(() {});
-    }
-  }
+  _auth.dispose();
 
-  @override
-  void dispose() {
-    _auth.removeListener(_atualizarTela);
-    _auth.dispose();
+  _nomeController.dispose();
+  _emailController.dispose();
+  _senhaController.dispose();
 
-    _nomeController.dispose();
-    _emailController.dispose();
-    _senhaController.dispose();
-
-    super.dispose();
-  }
+  super.dispose();
+}
 
   Future<void> _cadastrar() async {
     if (!_formKey.currentState!.validate()) {
@@ -79,106 +67,97 @@ class _CadastroViewState extends State<CadastroView> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Criar Conta'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 400,
-            ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.person_add,
-                    size: 70,
-                    color: Colors.deepPurple,
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    'Cadastre-se',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+ @override
+Widget build(BuildContext context) {
+  return ListenableBuilder(
+    listenable: _auth,
+    builder: (context, child) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Criar Conta'),
+          centerTitle: true,
+        ),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.person_add,
+                      size: 70,
+                      color: Colors.deepPurple,
                     ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  TextFormField(
-                    controller: _nomeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nome completo',
-                      prefixIcon: Icon(Icons.person),
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Cadastre-se',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    validator: Validadores.validarNome,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      labelText: 'E-mail',
-                      prefixIcon: Icon(Icons.email),
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: _nomeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Nome completo',
+                        prefixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: Validadores.validarNome,
                     ),
-                    validator: Validadores.validarEmail,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  TextFormField(
-                    controller: _senhaController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Senha',
-                      prefixIcon: Icon(Icons.lock),
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'E-mail',
+                        prefixIcon: Icon(Icons.email),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: Validadores.validarEmail,
                     ),
-                    validator: Validadores.validarSenha,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed:
-                          _auth.carregando ? null : _cadastrar,
-                      child: _auth.carregando
-                          ? const CircularProgressIndicator()
-                          : const Text('Cadastrar'),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _senhaController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Senha',
+                        prefixIcon: Icon(Icons.lock),
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: Validadores.validarSenha,
                     ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Voltar ao login'),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _auth.carregando ? null : _cadastrar,
+                        child: _auth.carregando
+                            ? const CircularProgressIndicator()
+                            : const Text('Cadastrar'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Voltar ao login'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      );
+    },
+  );
+}
+
 }

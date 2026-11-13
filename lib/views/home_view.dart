@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 
 import '../viewmodels/documentos_viewmodel.dart';
 
-import '../models/documento.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -73,9 +72,9 @@ Future<void> _abrirEditor() async {
                 'Usuário não identificado. Faça login novamente.',
               ),
             )
-          : AnimatedBuilder(
-              animation: _documentosVM,
-              builder: (context, child) {
+          : ListenableBuilder(
+    listenable: _documentosVM,
+    builder: (context, child) {
                 if (_documentosVM.carregando) {
                   return const Center(
                     child: CircularProgressIndicator(),

@@ -23,9 +23,10 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       final usuarios = await _banco.listarUsuarios();
+final emailNormalizado = email.trim().toLowerCase();
 
-      for (final usuario in usuarios) {
-        if (usuario.email == email && usuario.senha == senha) {
+for (final usuario in usuarios) {
+  if (usuario.email == emailNormalizado && usuario.senha == senha) {
           _usuarioAtual = usuario;
           return true;
         }
