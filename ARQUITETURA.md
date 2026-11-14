@@ -96,3 +96,24 @@ As views escutam o ViewModel com `ListenableBuilder(listenable: viewModel, build
 - **Home:** o `ListenableBuilder` decide entre indicador de carregamento, mensagem de erro, mensagem de lista vazia ou a `ListView` de documentos, conforme o estado do `DocumentosViewModel`. Excluir um documento chama o ViewModel, que recarrega a lista e notifica a tela.
 
 **Resultado.** As views ficaram responsáveis apenas pela interface, e as regras de negócio e o estado ficaram nos ViewModels, o que facilita testes e a implementação do CRUD e da persistência na Etapa 5.
+
+
+---
+
+## 4. Etapa 5: CRUD e Persistência Local
+
+**Persistência com `shared_preferences`.** Como a execução é em Flutter Web, o armazenamento usa chave-valor no navegador, dividido em três services dentro de `lib/models/services/`:
+
+| Service | Responsabilidade | Chaves |
+|---|---|---|
+| `BancoLocalService` | Usuários (cadastro e login) | `usuarios` |
+| `DocumentoStorageService` | CRUD de documentos | `documentos` |
+| `PreferencesService` | Tema e sessão | `tema_escuro`, `usuario_logado_id` |
+
+**CRUD de documentos.** O `DocumentoStorageService` lê a lista de documentos com `jsonDecode`, altera a lista (criar, editar, excluir) e grava de volta com `jsonEncode`. A conversão de cada objeto usa `toJson()` e `Documento.fromJson()`. O acesso passa sempre pelo `DocumentosViewModel`, que chama o service, recarrega a lista do usuário e chama `notifyListeners()`.
+
+**Tela do editor.** A `EditorView` serve para criar e para editar. Ela decide o modo pelo argumento da rota: se recebe um `Documento`, edita (campos preenchidos, chama `atualizarDocumento`); se recebe o `usuarioId`, cria (chama `criarDocumento`). O estado de "salvando" saiu da tela e foi para o ViewModel (`salvando`), de modo que o botão reage por `ListenableBuilder`, sem `setState`.
+
+**Tema e sessão.** O `AuthViewModel` passou a ser uma instância única (singleton), compartilhada por todas as telas. Antes de `runApp`, o `main()` chama `carregarPreferencias()`, que lê o tema e o id do usuário logado. O `MaterialApp` escuta o ViewModel e alterna `themeMode` entre claro e escuro, e a rota inicial é `/home` quando há sessão salva. Assim, ao recarregar a página (F5), o usuário continua logado, com o mesmo tema e os mesmos documentos.
+
+**Observação.** Por ser um trabalho didático, a senha é guardada em texto puro no armazenamento local. Em uma aplicação real, ela seria protegida com hash e a autenticação ficaria em um servidor.
