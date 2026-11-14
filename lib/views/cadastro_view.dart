@@ -20,11 +20,8 @@ class _CadastroViewState extends State<CadastroView> {
 
   final AuthViewModel _auth = AuthViewModel();
 
-  @override
+ @override
 void dispose() {
-
-  _auth.dispose();
-
   _nomeController.dispose();
   _emailController.dispose();
   _senhaController.dispose();

@@ -1,7 +1,7 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/documento.dart';
+import '../viewmodels/auth_viewmodel.dart';
 import '../viewmodels/documentos_viewmodel.dart';
 
 class EditorView extends StatefulWidget {
@@ -15,21 +15,35 @@ class _EditorViewState extends State<EditorView> {
   final _tituloController = TextEditingController();
   final _conteudoController = TextEditingController();
 
-  final DocumentosViewModel _documentosVM =
-      DocumentosViewModel();
+  final DocumentosViewModel _documentosVM = DocumentosViewModel();
 
   String? _usuarioId;
-  bool _salvando = false;
+  Documento? _documento; // null = novo documento
+  bool _inicializado = false;
+
+  bool get _editando => _documento != null;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final argumentos =
-        ModalRoute.of(context)?.settings.arguments;
+    if (_inicializado) return;
+    _inicializado = true;
 
-    if (argumentos is String) {
+    final argumentos = ModalRoute.of(context)?.settings.arguments;
+
+    if (argumentos is Documento) {
+      // Edição: recebeu o documento selecionado
+      _documento = argumentos;
+      _usuarioId = argumentos.usuarioId;
+      _tituloController.text = argumentos.titulo;
+      _conteudoController.text = argumentos.conteudo;
+    } else if (argumentos is String && argumentos.isNotEmpty) {
+      // Criação: recebeu o id do usuário
       _usuarioId = argumentos;
+    } else {
+      // Ex.: página recarregada (F5): usa a sessão salva
+      _usuarioId = AuthViewModel().usuarioAtual?.id;
     }
   }
 
@@ -40,9 +54,7 @@ class _EditorViewState extends State<EditorView> {
     if (titulo.isEmpty || conteudo.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Preencha o título e o conteúdo',
-          ),
+          content: Text('Preencha o título e o conteúdo'),
         ),
       );
       return;
@@ -57,29 +69,35 @@ class _EditorViewState extends State<EditorView> {
       return;
     }
 
-    setState(() {
-      _salvando = true;
-    });
-
     final agora = DateTime.now();
 
-    final documento = Documento(
-      id: agora.microsecondsSinceEpoch.toString(),
-      usuarioId: _usuarioId!,
-      titulo: titulo,
-      conteudo: conteudo,
-      dataCriacao: agora,
-      dataAtualizacao: agora,
-    );
+    final bool sucesso;
 
-    final sucesso =
-        await _documentosVM.criarDocumento(documento);
+    if (_editando) {
+      final atualizado = Documento(
+        id: _documento!.id,
+        usuarioId: _documento!.usuarioId,
+        titulo: titulo,
+        conteudo: conteudo,
+        dataCriacao: _documento!.dataCriacao,
+        dataAtualizacao: agora,
+      );
+
+      sucesso = await _documentosVM.atualizarDocumento(atualizado);
+    } else {
+      final novo = Documento(
+        id: agora.microsecondsSinceEpoch.toString(),
+        usuarioId: _usuarioId!,
+        titulo: titulo,
+        conteudo: conteudo,
+        dataCriacao: agora,
+        dataAtualizacao: agora,
+      );
+
+      sucesso = await _documentosVM.criarDocumento(novo);
+    }
 
     if (!mounted) return;
-
-    setState(() {
-      _salvando = false;
-    });
 
     if (sucesso) {
       Navigator.pop(context, true);
@@ -87,8 +105,7 @@ class _EditorViewState extends State<EditorView> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            _documentosVM.erro ??
-                'Erro ao salvar documento',
+            _documentosVM.erro ?? 'Erro ao salvar documento',
           ),
         ),
       );
@@ -107,19 +124,18 @@ class _EditorViewState extends State<EditorView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Editor de Documentos'),
+        title: Text(
+          _editando ? 'Editar documento' : 'Novo documento',
+        ),
         centerTitle: true,
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: 750,
-          ),
+          constraints: const BoxConstraints(maxWidth: 750),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
                   controller: _tituloController,
@@ -129,48 +145,48 @@ class _EditorViewState extends State<EditorView> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-
                 const SizedBox(height: 20),
-
                 Expanded(
                   child: TextField(
                     controller: _conteudoController,
                     expands: true,
                     maxLines: null,
                     minLines: null,
-                    textAlignVertical:
-                        TextAlignVertical.top,
+                    textAlignVertical: TextAlignVertical.top,
                     decoration: const InputDecoration(
                       labelText: 'Conteúdo',
-                      hintText:
-                          'Escreva seu documento...',
+                      hintText: 'Escreva seu documento...',
                       alignLabelWithHint: true,
                       border: OutlineInputBorder(),
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
+                ListenableBuilder(
+                  listenable: _documentosVM,
+                  builder: (context, child) {
+                    final salvando = _documentosVM.salvando;
 
-                FilledButton.icon(
-                  onPressed: _salvando
-                      ? null
-                      : _salvarDocumento,
-                  icon: _salvando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child:
-                              CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.save),
-                  label: Text(
-                    _salvando
-                        ? 'Salvando...'
-                        : 'Salvar documento',
-                  ),
+                    return FilledButton.icon(
+                      onPressed: salvando ? null : _salvarDocumento,
+                      icon: salvando
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.save),
+                      label: Text(
+                        salvando
+                            ? 'Salvando...'
+                            : (_editando
+                                ? 'Salvar alterações'
+                                : 'Salvar documento'),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
